@@ -1,22 +1,78 @@
+from enum import Enum
 import json
 import urllib.parse
 
 import requests
+from six import string_types
 
 from druiddb import exceptions
 
 
 apilevel = '2.0'
 # Threads may share the module and connections
-threadsafety = 3
+threadsafety = 2
 paramstyle = 'pyformat'
 
 
+class Type(Enum):
+    STRING = 1
+    NUMBER = 2
+
+
 def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http'):
+    """
+    Constructor for creating a connection to the database.
+
+        >>> conn = connect('localhost', 8082)
+        >>> curs = conn.cursor()
+
+    """
     return Connection(host, port, path, scheme)
 
 
+def check_closed(f):
+    """Decorator that checks if connection/cursor is closed."""
+
+    def g(self, *args, **kwargs):
+        if self.closed:
+            raise exceptions.Error(f'{self.__class__.__name__} already closed')
+        return f(self, *args, **kwargs)
+    return g
+
+
+def check_result(f):
+    """Decorator that checks if the cursor has results from `execute`."""
+
+    def g(self, *args, **kwargs):
+        if self._results is None:
+            raise exceptions.Error('Called before `execute`')
+        return f(self, *args, **kwargs)
+    return g
+
+
+def get_description_from_row(row):
+    """
+    Return description from a single row.
+
+    We only return the name and type, and the type is inferred from the data.
+    """
+    return [
+        (name, get_type(value), None, None, None, None, True)
+        for name, value in row.items()
+    ]
+
+
+def get_type(value):
+    """Infer type from value."""
+    if isinstance(value, string_types):
+        return Type.STRING
+    elif isinstance(value, (int, float)):
+        return Type.NUMBER
+
+
 class Connection:
+
+    """Connection to a Druid database."""
 
     def __init__(
         self,
@@ -28,18 +84,40 @@ class Connection:
         netloc = f'{host}:{port}'
         self.url = urllib.parse.urlunparse(
             (scheme, netloc, path, None, None, None))
+        self.closed = False
+        self.cursors = []
 
+    @check_closed
     def close(self):
-        pass
+        """Close the connection now."""
+        self.closed = True
+        for cursor in self.cursors:
+            try:
+                cursor.close()
+            except exceptions.Error:
+                pass  # already closed
 
+    @check_closed
     def commit(self):
+        """
+        Commit any pending transaction to the database.
+
+        Not supported.
+        """
         pass
 
+    @check_closed
     def cursor(self):
-        return Cursor(self.url)
+        """Return a new Cursor Object using the connection."""
+        cursor = Cursor(self.url)
+        self.cursors.append(cursor)
+
+        return cursor
 
 
 class Cursor:
+
+    """Connection cursor."""
 
     def __init__(self, url):
         self.url = url
@@ -51,43 +129,80 @@ class Cursor:
 
         self.closed = False
 
-        # these are updated only after a query
+        # this is updated only after a query
         self.description = None
+
+        # rowcount is never updated because we stream the rows
         self.rowcount = -1
 
+        # this is set to an iterator after a successfull query
         self._results = None
 
+    @check_closed
     def close(self):
+        """Close the cursor."""
         self.closed = True
 
+    @check_closed
     def execute(self, operation, parameters=None):
         if parameters:
             raise exceptions.NotSupportedError('Parameters are not supported')
 
         self._results = self._stream_query(operation)
 
+    @check_closed
     def executemany(self, operation, seq_of_parameters=None):
-        pass
+        raise exceptions.NotSupportedError(
+            '`executemany` is not supported, use `execute` instead')
 
+    @check_result
+    @check_closed
     def fetchone(self):
-        return self.next()
+        """
+        Fetch the next row of a query result set, returning a single sequence,
+        or `None` when no more data is available.
+        """
+        try:
+            return self.next()
+        except StopIteration:
+            return None
 
+    @check_result
+    @check_closed
     def fetchmany(self, size=None):
+        """
+        Fetch the next set of rows of a query result, returning a sequence of
+        sequences (e.g. a list of tuples). An empty sequence is returned when
+        no more rows are available.
+        """
         size = size or self.arraysize
         return [self.next() for _ in range(size)]
 
+    @check_result
+    @check_closed
     def fetchall(self):
+        """
+        Fetch all (remaining) rows of a query result, returning them as a
+        sequence of sequences (e.g. a list of tuples). Note that the cursor's
+        arraysize attribute can affect the performance of this operation.
+        """
         return list(self)
 
+    @check_closed
     def setinputsizes(self, sizes):
+        # not supported
         pass
 
+    @check_closed
     def setoutputsizes(self, sizes):
+        # not supported
         pass
 
+    @check_closed
     def __iter__(self):
         return self
 
+    @check_closed
     def __next__(self):
         return next(self._results)
 
@@ -100,58 +215,61 @@ class Cursor:
         This method will yield rows as the data is returned in chunks from the
         server.
         """
+        self.description = None
+
         headers = {'Content-Type': 'application/json'}
         payload = {'query': query}
         r = requests.post(self.url, stream=True, headers=headers, json=payload)
-
         if r.encoding is None:
             r.encoding = 'utf-8'
 
         # Druid will stream the data in chunks of 8k bytes, splitting the JSON
         # between them; setting `chunk_size` to `None` makes it use the server
         # size
-        body = ''
-        for block in r.iter_content(chunk_size=None, decode_unicode=True):
-            if block:
-                body += block
-
-            # find last complete row
-            boundary = 0
-            brackets = 0
-            in_string = False
-            for i, char in enumerate(body):
-                if char == '"':
-                    if not in_string:
-                        in_string = True
-                    elif body[i - 1] != '\\':
-                        in_string = False
-
-                if in_string:
-                    continue
-
-                if char == '{':
-                    brackets += 1
-                elif char == '}':
-                    brackets -= 1
-                    if brackets == 0 and i > boundary:
-                        boundary = i + 1
-
-            rows = body[:boundary].lstrip('[,')
-            body = body[boundary:]
-
-            for row in json.loads(f'[{rows}]'):
-                yield tuple(row.values())
+        chunks = r.iter_content(chunk_size=None, decode_unicode=True)
+        for row in rows_from_chunks(chunks):
+            # update description
+            if self.description is None:
+                self.description = get_description_from_row(row)
+            yield tuple(row.values())
 
 
-if __name__ == '__main__':
-    conn = connect('localhost')
-    curs = conn.cursor()
-    curs.execute(
-        "SELECT status, region FROM rides WHERE status != 'canceled' LIMIT 10")
-    for row in curs:
-        print(row)
-    curs.execute(
-        "SELECT status, region FROM rides WHERE status != 'canceled' LIMIT 10")
-    print(curs.fetchone())
-    print('line')
-    print(curs.fetchall())
+def rows_from_chunks(chunks):
+    """
+    A generator yield rows from JSON chunks.
+
+    Druid will return the data in chunks, but they are not aligned with the
+    JSON objects. This function will parse all complete rows inside each chunk,
+    yielding them as soon as possible.
+    """
+    body = ''
+    for chunk in chunks:
+        if chunk:
+            body = f'{body}{chunk}'
+
+        # find last complete row
+        boundary = 0
+        brackets = 0
+        in_string = False
+        for i, char in enumerate(body):
+            if char == '"':
+                if not in_string:
+                    in_string = True
+                elif body[i - 1] != '\\':
+                    in_string = False
+
+            if in_string:
+                continue
+
+            if char == '{':
+                brackets += 1
+            elif char == '}':
+                brackets -= 1
+                if brackets == 0 and i > boundary:
+                    boundary = i + 1
+
+        rows = body[:boundary].lstrip('[,')
+        body = body[boundary:]
+
+        for row in json.loads(f'[{rows}]'):
+            yield row

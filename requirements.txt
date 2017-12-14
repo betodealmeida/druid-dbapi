@@ -1,2 +1,2 @@
-setuptools==38.2.4
-parsimonious==0.8.0
+requests==2.18.4
+six==1.11.0
