@@ -4,7 +4,6 @@
 # Note: To use the 'upload' functionality of this file, you must:
 #   $ pip install twine
 
-import io
 import os
 import sys
 from shutil import rmtree
@@ -22,6 +21,10 @@ AUTHOR = 'Beto Dealmeida'
 REQUIRED = [
     'requests',
     'six',
+]
+
+sqlalchemy_extras = [
+    'sqlalchemy',
 ]
 
 development_extras = [
@@ -92,12 +95,17 @@ setup(
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
-    # entry_points={
-    #     'console_scripts': ['mycli=mymodule:cli'],
-    # },
+    entry_points={
+        'sqlalchemy.dialects': [
+            'druid = druiddb.sqlalchemy:DruidHTTPDialect',
+            'druid.http = druiddb.sqlalchemy:DruidHTTPDialect',
+            'druid.https = druiddb.sqlalchemy:DruidHTTPSDialect',
+        ],
+    },
     install_requires=REQUIRED,
     extras_require={
         'dev': development_extras,
+        'sqlalchemy': sqlalchemy_extras,
     },
     include_package_data=True,
     license='MIT',

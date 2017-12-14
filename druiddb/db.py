@@ -1,3 +1,4 @@
+from collections import namedtuple
 from enum import Enum
 import json
 import urllib.parse
@@ -6,6 +7,7 @@ import requests
 from six import string_types
 
 from druiddb import exceptions
+from druiddb.exceptions import Error
 
 
 apilevel = '2.0'
@@ -17,6 +19,7 @@ paramstyle = 'pyformat'
 class Type(Enum):
     STRING = 1
     NUMBER = 2
+    BOOLEAN = 3
 
 
 def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http'):
@@ -54,10 +57,20 @@ def get_description_from_row(row):
     """
     Return description from a single row.
 
-    We only return the name and type, and the type is inferred from the data.
+    We only return the name, type (inferred from the data) and if the values
+    can be NULL. String columns in Druid are NULLable. Numeric columns are NOT
+    NULL.
     """
     return [
-        (name, get_type(value), None, None, None, None, True)
+        (
+            name,                            # name
+            get_type(value),                 # type_code
+            None,                            # [display_size]
+            None,                            # [internal_size]
+            None,                            # [precision]
+            None,                            # [scale]
+            get_type(value) == Type.STRING,  # [null_ok]
+        )
         for name, value in row.items()
     ]
 
@@ -68,6 +81,10 @@ def get_type(value):
         return Type.STRING
     elif isinstance(value, (int, float)):
         return Type.NUMBER
+    elif isinstance(value, bool):
+        return Type.BOOLEAN
+
+    raise exceptions.Error(f'Value of unknown type: {value}')
 
 
 class Connection:
@@ -236,11 +253,16 @@ class Cursor:
         # between them; setting `chunk_size` to `None` makes it use the server
         # size
         chunks = r.iter_content(chunk_size=None, decode_unicode=True)
+        Row = None
         for row in rows_from_chunks(chunks):
             # update description
             if self.description is None:
                 self.description = get_description_from_row(row)
-            yield tuple(row.values())
+
+            # return row in namedtuple
+            if Row is None:
+                Row = namedtuple('Row', row.keys(), rename=True)
+            yield Row(*row.values())
 
 
 def rows_from_chunks(chunks):
