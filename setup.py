@@ -21,6 +21,7 @@ AUTHOR = 'Beto Dealmeida'
 # What packages are required for this module to be executed?
 REQUIRED = [
     'requests',
+    'six',
 ]
 
 development_extras = [
