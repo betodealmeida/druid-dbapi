@@ -223,6 +223,15 @@ class Cursor:
         if r.encoding is None:
             r.encoding = 'utf-8'
 
+        # raise any error messages
+        if r.status_code != 200:
+            payload = r.json()
+            msg = (
+                f'{payload["error"]} ({payload["errorClass"]}): '
+                f'{payload["errorMessage"]}'
+            )
+            raise exceptions.ProgrammingError(msg)
+
         # Druid will stream the data in chunks of 8k bytes, splitting the JSON
         # between them; setting `chunk_size` to `None` makes it use the server
         # size
@@ -236,7 +245,7 @@ class Cursor:
 
 def rows_from_chunks(chunks):
     """
-    A generator yield rows from JSON chunks.
+    A generator that yields rows from JSON chunks.
 
     Druid will return the data in chunks, but they are not aligned with the
     JSON objects. This function will parse all complete rows inside each chunk,
