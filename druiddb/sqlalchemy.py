@@ -1,11 +1,28 @@
 from sqlalchemy.engine import default
 from sqlalchemy.sql import compiler
+from sqlalchemy import types
 
 from druiddb import db, exceptions
-from druiddb.db import Type
 
 
 RESERVED_SCHEMAS = ['INFORMATION_SCHEMA']
+
+
+type_map = {
+    'char': types.String,
+    'varchar': types.String,
+    'float': types.Float,
+    'decimal': types.Float,
+    'real': types.Float,
+    'double': types.Float,
+    'boolean': types.Boolean,
+    'tinyint': types.BigInteger,
+    'smallint': types.BigInteger,
+    'integer': types.BigInteger,
+    'bigint': types.BigInteger,
+    'timestamp': types.TIMESTAMP,
+    'date': types.DATE,
+}
 
 
 class DruidIdentifierPreparer(compiler.IdentifierPreparer):
@@ -149,7 +166,7 @@ class DruidDialect(default.DefaultDialect):
         return [
             {
                 'name': row.COLUMN_NAME,
-                'type': get_type(row.DATA_TYPE),
+                'type': type_map[row.DATA_TYPE.lower()],
                 'nullable': get_is_nullable(row.IS_NULLABLE),
                 'default': get_default(row.COLUMN_DEFAULT),
             }
@@ -211,17 +228,6 @@ DruidHTTPDialect = DruidDialect
 class DruidHTTPSDialect(DruidDialect):
 
     scheme = 'https'
-
-
-def get_type(druid_type):
-    type_map = {
-        'STRING': Type.STRING,
-        'DOUBLE': Type.NUMBER,
-        'FLOAT': Type.NUMBER,
-        'LONG': Type.NUMBER,
-        'COMPLEX': Type.NUMBER,
-    }
-    return type_map.get(druid_type, Type.STRING)
 
 
 def get_is_nullable(druid_is_nullable):
