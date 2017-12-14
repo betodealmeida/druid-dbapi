@@ -21,6 +21,7 @@ AUTHOR = 'Beto Dealmeida'
 REQUIRED = [
     'requests',
     'six',
+    'future-fstrings',
 ]
 
 sqlalchemy_extras = [
@@ -97,9 +98,9 @@ setup(
 
     entry_points={
         'sqlalchemy.dialects': [
-            'druid = druiddb.sqlalchemy:DruidHTTPDialect',
-            'druid.http = druiddb.sqlalchemy:DruidHTTPDialect',
-            'druid.https = druiddb.sqlalchemy:DruidHTTPSDialect',
+            'druid = druiddb.druid_sqlalchemy:DruidHTTPDialect',
+            'druid.http = druiddb.druid_sqlalchemy:DruidHTTPDialect',
+            'druid.https = druiddb.druid_sqlalchemy:DruidHTTPSDialect',
         ],
     },
     install_requires=REQUIRED,
