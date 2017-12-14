@@ -2,7 +2,8 @@ from sqlalchemy.engine import default
 from sqlalchemy.sql import compiler
 from sqlalchemy import types
 
-from druiddb import db, exceptions
+import druiddb
+from druiddb import exceptions
 
 
 RESERVED_SCHEMAS = ['INFORMATION_SCHEMA']
@@ -98,7 +99,7 @@ class DruidDialect(default.DefaultDialect):
 
     @classmethod
     def dbapi(cls):
-        return db
+        return druiddb
 
     def create_connect_args(self, url):
         kwargs = {

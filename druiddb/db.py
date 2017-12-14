@@ -1,5 +1,6 @@
 from collections import namedtuple
 from enum import Enum
+import itertools
 import json
 import urllib.parse
 
@@ -7,7 +8,6 @@ import requests
 from six import string_types
 
 from druiddb import exceptions
-from druiddb.exceptions import Error
 
 
 apilevel = '2.0'
@@ -149,11 +149,18 @@ class Cursor:
         # this is updated only after a query
         self.description = None
 
-        # rowcount is never updated because we stream the rows
-        self.rowcount = -1
-
         # this is set to an iterator after a successfull query
         self._results = None
+
+    @property
+    @check_result
+    @check_closed
+    def rowcount(self):
+        # consume the iterator
+        results = list(self._results)
+        n = len(results)
+        self._results = iter(results)
+        return n
 
     @check_closed
     def close(self):
@@ -162,10 +169,16 @@ class Cursor:
 
     @check_closed
     def execute(self, operation, parameters=None):
-        if parameters:
-            raise exceptions.NotSupportedError('Parameters are not supported')
+        query = apply_parameters(operation, parameters or {})
 
-        self._results = self._stream_query(operation)
+        # `_stream_query` returns a generator that produces the rows; we need
+        # to consume the first row so that `description` is properly set, so
+        # let's consume it and insert it back.
+        results = self._stream_query(query)
+        first_row = next(results)
+        self._results = itertools.chain([first_row], results)
+
+        return self
 
     @check_closed
     def executemany(self, operation, seq_of_parameters=None):
@@ -304,3 +317,21 @@ def rows_from_chunks(chunks):
 
         for row in json.loads(f'[{rows}]'):
             yield row
+
+
+def apply_parameters(operation, parameters):
+    escaped_parameters = {
+        key: escape(value) for key, value in parameters.items()
+    }
+    return operation % escaped_parameters
+
+
+def escape(value):
+    if value == '*':
+        return value
+    elif isinstance(value, string_types):
+        return "'{}'".format(value.replace("'", "''"))
+    elif isinstance(value, (int, float)):
+        return value
+    elif isinstance(value, bool):
+        return 'TRUE' if value else 'FALSE'
