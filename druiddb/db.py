@@ -206,7 +206,7 @@ class Cursor:
         no more rows are available.
         """
         size = size or self.arraysize
-        return [self.next() for _ in range(size)]
+        return list(itertools.islice(self, size))
 
     @check_result
     @check_closed

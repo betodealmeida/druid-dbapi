@@ -114,11 +114,11 @@ class DruidDialect(default.DefaultDialect):
         # Each Druid datasource appears as a table in the "druid" schema. This
         # is also the default schema, so Druid datasources can be referenced as
         # either druid.dataSourceName or simply dataSourceName.
-        curs = connection.cursor()
-        curs.execute('SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA')
+        result = connection.execute(
+            'SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA')
 
         return [
-            row.SCHEMA_NAME for row in curs
+            row.SCHEMA_NAME for row in result
             if row.SCHEMA_NAME not in RESERVED_SCHEMAS
         ]
 
@@ -129,20 +129,18 @@ class DruidDialect(default.DefaultDialect):
              WHERE TABLE_NAME = '{table_name}'
         """
 
-        curs = connection.cursor()
-        curs.execute(query)
+        result = connection.execute(query)
 
-        return curs.fetchone().exists
+        return result.fetchone().exists
 
     def get_table_names(self, connection, schema=None, **kwargs):
         query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES"
         if schema:
             query = f"{query} WHERE TABLE_SCHEMA = '{schema}'"
 
-        curs = connection.cursor()
-        curs.execute(query)
+        result = connection.execute(query)
 
-        return [row.TABLE_NAME for row in curs]
+        return [row.TABLE_NAME for row in result]
 
     def get_view_names(self, connection, schema=None, **kwargs):
         return []
@@ -162,7 +160,7 @@ class DruidDialect(default.DefaultDialect):
         if schema:
             query = f"{query} AND TABLE_SCHEMA = '{schema}'"
 
-        rows = connection.execute(query)
+        result = connection.execute(query)
 
         return [
             {
@@ -171,7 +169,7 @@ class DruidDialect(default.DefaultDialect):
                 'nullable': get_is_nullable(row.IS_NULLABLE),
                 'default': get_default(row.COLUMN_DEFAULT),
             }
-            for row in rows
+            for row in result
         ]
 
     def get_pk_constraint(self, connection, table_name, schema=None, **kwargs):
