@@ -102,7 +102,7 @@ setup(
     # py_modules=['mypackage'],
 
     entry_points={
-        'console.scripts': [
+        'console_scripts': [
             'druiddb = druiddb.console:main',
         ],
         'sqlalchemy.dialects': [

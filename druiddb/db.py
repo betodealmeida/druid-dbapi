@@ -137,6 +137,16 @@ class Connection(object):
 
         return cursor
 
+    def execute(self, operation, parameters=None):
+        cursor = self.cursor()
+        return cursor.execute(operation, parameters)
+
+    def __enter__(self):
+        return self.cursor()
+
+    def __exit__(self, *exc):
+        self.close()
+
 
 class Cursor(object):
 
