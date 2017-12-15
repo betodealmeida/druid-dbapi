@@ -31,6 +31,7 @@ sqlalchemy_extras = [
 cli_extras = [
     'pygments',
     'prompt_toolkit',
+    'tabulate',
 ]
 
 development_extras = [
