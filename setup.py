@@ -27,6 +27,11 @@ sqlalchemy_extras = [
     'sqlalchemy',
 ]
 
+cli_extras = [
+    'pygments',
+    'prompt_toolkit',
+]
+
 development_extras = [
     'nose',
     'pipreqs',
@@ -96,6 +101,9 @@ setup(
     # py_modules=['mypackage'],
 
     entry_points={
+        'console.scripts': [
+            'druiddb = druiddb.console:main',
+        ],
         'sqlalchemy.dialects': [
             'druid = druiddb.sqlalchemy:DruidHTTPDialect',
             'druid.http = druiddb.sqlalchemy:DruidHTTPDialect',
@@ -106,6 +114,7 @@ setup(
     extras_require={
         'dev': development_extras,
         'sqlalchemy': sqlalchemy_extras,
+        'cli': cli_extras,
     },
     include_package_data=True,
     license='MIT',
