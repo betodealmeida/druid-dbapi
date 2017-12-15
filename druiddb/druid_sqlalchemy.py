@@ -33,8 +33,13 @@ type_map = {
 }
 
 
+class UniversalSet(object):
+    def __contains__(self, item):
+        return True
+
+
 class DruidIdentifierPreparer(compiler.IdentifierPreparer):
-    pass
+    reserved_words = UniversalSet()
 
 
 class DruidCompiler(compiler.SQLCompiler):
