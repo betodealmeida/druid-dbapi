@@ -1,11 +1,17 @@
+# -*- coding: future_fstrings -*-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 from collections import namedtuple
 from enum import Enum
 import itertools
 import json
-import urllib.parse
+from six import string_types
+from six.moves.urllib import parse
 
 import requests
-from six import string_types
 
 from druiddb import exceptions
 
@@ -87,7 +93,7 @@ def get_type(value):
     raise exceptions.Error(f'Value of unknown type: {value}')
 
 
-class Connection:
+class Connection(object):
 
     """Connection to a Druid database."""
 
@@ -99,7 +105,7 @@ class Connection:
         scheme='http',
     ):
         netloc = f'{host}:{port}'
-        self.url = urllib.parse.urlunparse(
+        self.url = parse.urlunparse(
             (scheme, netloc, path, None, None, None))
         self.closed = False
         self.cursors = []
@@ -132,7 +138,7 @@ class Connection:
         return cursor
 
 
-class Cursor:
+class Cursor(object):
 
     """Connection cursor."""
 
@@ -257,7 +263,7 @@ class Cursor:
         if r.status_code != 200:
             payload = r.json()
             msg = (
-                f'{payload["error"]} ({payload["errorClass"]}): '
+                f'{payload["error"]} ({payload["errorClass"]}): ' +
                 f'{payload["errorMessage"]}'
             )
             raise exceptions.ProgrammingError(msg)
