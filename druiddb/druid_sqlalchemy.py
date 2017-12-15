@@ -1,4 +1,5 @@
 # -*- coding: future_fstrings -*-
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -136,7 +137,6 @@ class DruidDialect(default.DefaultDialect):
         """
 
         result = connection.execute(query)
-
         return result.fetchone().exists
 
     def get_table_names(self, connection, schema=None, **kwargs):
@@ -145,7 +145,6 @@ class DruidDialect(default.DefaultDialect):
             query = f"{query} WHERE TABLE_SCHEMA = '{schema}'"
 
         result = connection.execute(query)
-
         return [row.TABLE_NAME for row in result]
 
     def get_view_names(self, connection, schema=None, **kwargs):

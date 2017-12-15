@@ -138,7 +138,7 @@ class Connection(object):
         return cursor
 
 
-class Cursor:
+class Cursor(object):
 
     """Connection cursor."""
 
