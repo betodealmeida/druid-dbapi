@@ -2,10 +2,11 @@ from collections import namedtuple
 from enum import Enum
 import itertools
 import json
-import urllib.parse
+from six.moves.urllib import parse
 
 import requests
 from six import string_types
+from six.moves import urllib
 
 from druiddb import exceptions
 
@@ -99,7 +100,7 @@ class Connection:
         scheme='http',
     ):
         netloc = f'{host}:{port}'
-        self.url = urllib.parse.urlunparse(
+        self.url = parse.urlunparse(
             (scheme, netloc, path, None, None, None))
         self.closed = False
         self.cursors = []
@@ -256,10 +257,7 @@ class Cursor:
         # raise any error messages
         if r.status_code != 200:
             payload = r.json()
-            msg = (
-                f'{payload["error"]} ({payload["errorClass"]}): '
-                f'{payload["errorMessage"]}'
-            )
+            msg = '{error} ({errorClass}): {errorMessage}'.format(**payload)
             raise exceptions.ProgrammingError(msg)
 
         # Druid will stream the data in chunks of 8k bytes, splitting the JSON
