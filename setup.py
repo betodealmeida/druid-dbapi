@@ -23,6 +23,8 @@ REQUIRED = [
     'six',
     'future-fstrings',
 ]
+if sys.version_info < (3, 4):
+    REQUIRED.append('enum')
 
 sqlalchemy_extras = [
     'sqlalchemy',

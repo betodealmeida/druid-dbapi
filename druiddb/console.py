@@ -164,9 +164,10 @@ def main():
             break  # Control-D pressed.
 
         # run query
-        result = cursor.execute(query.rstrip(';'))
-        headers = [t[0] for t in cursor.description]
-        print(tabulate(result, headers=headers))
+        if query.strip():
+            result = cursor.execute(query.rstrip(';'))
+            headers = [t[0] for t in cursor.description]
+            print(tabulate(result, headers=headers))
 
     print('GoodBye!')
 
