@@ -246,4 +246,4 @@ def get_is_nullable(druid_is_nullable):
 
 def get_default(druid_column_default):
     # currently unused, returns ''
-    return druid_column_default if druid_column_default != '' else None
+    return str(druid_column_default) if druid_column_default != '' else None

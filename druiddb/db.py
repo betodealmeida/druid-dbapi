@@ -16,12 +16,6 @@ import requests
 from druiddb import exceptions
 
 
-apilevel = '2.0'
-# Threads may share the module and connections
-threadsafety = 2
-paramstyle = 'pyformat'
-
-
 class Type(Enum):
     STRING = 1
     NUMBER = 2
