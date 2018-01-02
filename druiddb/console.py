@@ -165,7 +165,12 @@ def main():
 
         # run query
         if query.strip():
-            result = cursor.execute(query.rstrip(';'))
+            try:
+                result = cursor.execute(query.rstrip(';'))
+            except Exception as e:
+                print(e)
+                continue
+
             headers = [t[0] for t in cursor.description]
             print(tabulate(result, headers=headers))
 
