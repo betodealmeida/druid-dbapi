@@ -141,7 +141,7 @@ def get_autocomplete(connection):
 
 
 def main():
-    history = FileHistory(os.path.expanduser('~/.druiddb.txt'))
+    history = FileHistory(os.path.expanduser('~/.druiddb_history'))
 
     try:
         url = sys.argv[1]
@@ -171,7 +171,7 @@ def main():
                 print(e)
                 continue
 
-            headers = [t[0] for t in cursor.description]
+            headers = [t[0] for t in cursor.description or []]
             print(tabulate(result, headers=headers))
 
     print('GoodBye!')

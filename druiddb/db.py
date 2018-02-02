@@ -77,7 +77,7 @@ def get_description_from_row(row):
 
 def get_type(value):
     """Infer type from value."""
-    if isinstance(value, string_types):
+    if isinstance(value, string_types) or value is None:
         return Type.STRING
     elif isinstance(value, (int, float)):
         return Type.NUMBER
@@ -131,6 +131,7 @@ class Connection(object):
 
         return cursor
 
+    @check_closed
     def execute(self, operation, parameters=None):
         cursor = self.cursor()
         return cursor.execute(operation, parameters)
