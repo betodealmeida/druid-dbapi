@@ -288,6 +288,14 @@ class Cursor(object):
                 Row = namedtuple('Row', row.keys(), rename=True)
             yield Row(*row.values())
 
+    def _delete_datasource(self, query):
+        """
+        Delete a datasource.
+
+        Reference: https://groups.google.com/d/msg/druid-user/V4pbcZC7rjU/G98S-E_CAQAJ
+        """
+        pass
+
 
 def rows_from_chunks(chunks):
     """
