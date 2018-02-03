@@ -1,10 +1,10 @@
 from __future__ import unicode_literals
 
 import os
+import re
 import sys
 
 from prompt_toolkit import prompt, AbortAction
-import re
 
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.contrib.completers import WordCompleter
