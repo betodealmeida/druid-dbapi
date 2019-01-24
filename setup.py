@@ -19,21 +19,18 @@ AUTHOR = 'Beto Dealmeida'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
+    'dbapihelper>=0.1.2',
     'requests',
     'six',
     'future-fstrings',
 ]
-if sys.version_info < (3, 4):
-    REQUIRED.append('enum')
 
 sqlalchemy_extras = [
     'sqlalchemy',
 ]
 
 cli_extras = [
-    'pygments',
-    'prompt_toolkit',
-    'tabulate',
+    'dbapihelper[cli]>=0.1.2',
 ]
 
 development_extras = [

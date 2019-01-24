@@ -10,7 +10,7 @@ from sqlalchemy.sql import compiler
 from sqlalchemy import types
 
 import druiddb
-from druiddb import exceptions
+from dbapihelper import exceptions
 
 
 RESERVED_SCHEMAS = ['INFORMATION_SCHEMA']

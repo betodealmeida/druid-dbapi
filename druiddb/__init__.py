@@ -1,5 +1,5 @@
 from druiddb.db import connect
-from druiddb.exceptions import (
+from dbapihelper.exceptions import (
     DataError,
     DatabaseError,
     Error,

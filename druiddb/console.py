@@ -1,19 +1,9 @@
 from __future__ import unicode_literals
 
 import os
-import re
 import sys
 
-from prompt_toolkit import prompt, AbortAction
-
-from prompt_toolkit.history import FileHistory
-from prompt_toolkit.contrib.completers import WordCompleter
-from pygments.lexers import SqlLexer
-from pygments.style import Style
-from pygments.token import Token
-from pygments.styles.default import DefaultStyle
 from six.moves.urllib import parse
-from tabulate import tabulate
 
 from druiddb import connect
 
@@ -110,16 +100,6 @@ replacements = {
 }
 
 
-class DocumentStyle(Style):
-    styles = {
-        Token.Menu.Completions.Completion.Current: 'bg:#00aaaa #000000',
-        Token.Menu.Completions.Completion: 'bg:#008888 #ffffff',
-        Token.Menu.Completions.ProgressButton: 'bg:#003333',
-        Token.Menu.Completions.ProgressBar: 'bg:#00aaaa',
-    }
-    styles.update(DefaultStyle.styles)
-
-
 def get_connection_kwargs(url):
     parts = parse.urlparse(url)
     if ':' in parts.netloc:
@@ -158,45 +138,19 @@ def get_autocomplete(connection):
 
 
 def main():
-    history = FileHistory(os.path.expanduser('~/.druiddb_history'))
-
     try:
         url = sys.argv[1]
     except IndexError:
         url = 'http://localhost:8082/druid/v2/sql/'
     kwargs = get_connection_kwargs(url)
     connection = connect(**kwargs)
+
     cursor = connection.cursor()
+    reserved = get_autocomplete(connection)
+    history_file = os.path.expanduser('~/.druiddb_history')
+    raise_ = False
 
-    words = get_autocomplete(connection)
-    sql_completer = WordCompleter(words, ignore_case=True)
-
-    while True:
-        try:
-            query = prompt(
-                '> ', lexer=SqlLexer, completer=sql_completer,
-                style=DocumentStyle, history=history,
-                on_abort=AbortAction.RETRY)
-        except EOFError:
-            break  # Control-D pressed.
-
-        # run query
-        query = query.strip('; ')
-        if query:
-            # shortcuts
-            for pattern, repl in replacements.items():
-                query = re.sub(pattern, repl, query)
-
-            try:
-                result = cursor.execute(query)
-            except Exception as e:
-                print(e)
-                continue
-
-            headers = [t[0] for t in cursor.description or []]
-            print(tabulate(result, headers=headers))
-
-    print('GoodBye!')
+    loop(cursor, reserved, history_file, raise_=raise_)
 
 
 if __name__ == '__main__':
